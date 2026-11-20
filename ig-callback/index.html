@@ -1,0 +1,29 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="stylesheet" href="/style.css">
+<title>Connecting Instagram · ViceTaped</title></head><body>
+<header class="wrap"><a class="brand" href="/"><img src="/logo.svg" alt="ViceTaped logo"><span>VICE<b>TAPED</b></span></a><nav><a href="/">Home</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav></header>
+<main class="wrap"><article class="doc">
+<h1 id="t">Connecting Instagram…</h1>
+<p id="m">Sending the sign-in back to the ViceTaped app on your computer.</p>
+<div id="fb" hidden><p>If the app didn't say <i>"ViceTaped is connected to Instagram"</i> within a few seconds, copy this link and paste it into
+ViceTaped Studio (Settings › Instagram › <b>Paste link</b>) or into the terminal that is waiting:</p>
+<p><code id="u" style="word-break:break-all"></code></p><p><button id="c" type="button">Copy link</button></p></div>
+<p class="note">This page only passes the one-time code from Instagram to the app running on this computer (127.0.0.1). It stores nothing and sends nothing anywhere else. The code is useless without the app's secret, works once, and expires after an hour.</p>
+</article></main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search), t = document.getElementById("t"), m = document.getElementById("m");
+  var code = (q.get("code") || "").replace(/#_$/, ""), state = q.get("state") || "", err = q.get("error");
+  if (history.replaceState) history.replaceState(null, "", location.pathname);   // don't leave the code in history
+  if (err) { t.textContent = "Instagram sign-in cancelled"; m.textContent = (q.get("error_description") || err).replace(/\+/g, " ") + ". Close this tab and click Connect Instagram again."; return; }
+  var p = /^p(\d{2,5})-[A-Za-z0-9_-]{8,}$/.exec(state), port = p ? +p[1] : 0;
+  if (!code || !p || port < 1024 || port > 65535) { t.textContent = "Nothing to do here"; m.textContent = "This page is only used during the ViceTaped app's Instagram sign-in."; return; }
+  var target = "http://127.0.0.1:" + port + "/callback/instagram/?code=" + encodeURIComponent(code) + "&state=" + encodeURIComponent(state);
+  document.getElementById("u").textContent = target;
+  document.getElementById("c").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(target); this.textContent = "Copied"; };
+  setTimeout(function () { document.getElementById("fb").hidden = false; }, 2500);
+  location.replace(target);
+})();
+</script>
+</body></html>
