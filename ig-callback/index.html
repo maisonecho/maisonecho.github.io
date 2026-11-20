@@ -6,24 +6,45 @@
 <main class="wrap"><article class="doc">
 <h1 id="t">Connecting Instagram…</h1>
 <p id="m">Sending the sign-in back to the ViceTaped app on your computer.</p>
-<div id="fb" hidden><p>If the app didn't say <i>"ViceTaped is connected to Instagram"</i> within a few seconds, copy this link and paste it into
+<div id="fb" hidden><p id="fbt">If the app didn't say <i>"ViceTaped is connected to Instagram"</i> within a few seconds, copy this link and paste it into
 ViceTaped Studio (Settings › Instagram › <b>Paste link</b>) or into the terminal that is waiting:</p>
-<p><code id="u" style="word-break:break-all"></code></p><p><button id="c" type="button">Copy link</button></p></div>
-<p class="note">This page only passes the one-time code from Instagram to the app running on this computer (127.0.0.1). It stores nothing and sends nothing anywhere else. The code is useless without the app's secret, works once, and expires after an hour.</p>
+<p><code id="u" style="word-break:break-all"></code></p><p><button id="c" type="button">Copy</button></p></div>
+<p class="note">This page only passes the sign-in result from Meta (a one-time code, or an access token) to the app running on this computer (127.0.0.1). It runs entirely in your browser, stores nothing and sends nothing anywhere else.</p>
 </article></main>
 <script>
 (function () {
-  var q = new URLSearchParams(location.search), t = document.getElementById("t"), m = document.getElementById("m");
-  var code = (q.get("code") || "").replace(/#_$/, ""), state = q.get("state") || "", err = q.get("error");
-  if (history.replaceState) history.replaceState(null, "", location.pathname);   // don't leave the code in history
-  if (err) { t.textContent = "Instagram sign-in cancelled"; m.textContent = (q.get("error_description") || err).replace(/\+/g, " ") + ". Close this tab and click Connect Instagram again."; return; }
-  var p = /^p(\d{2,5})-[A-Za-z0-9_-]{8,}$/.exec(state), port = p ? +p[1] : 0;
-  if (!code || !p || port < 1024 || port > 65535) { t.textContent = "Nothing to do here"; m.textContent = "This page is only used during the ViceTaped app's Instagram sign-in."; return; }
-  var target = "http://127.0.0.1:" + port + "/callback/instagram/?code=" + encodeURIComponent(code) + "&state=" + encodeURIComponent(state);
-  document.getElementById("u").textContent = target;
-  document.getElementById("c").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(target); this.textContent = "Copied"; };
-  setTimeout(function () { document.getElementById("fb").hidden = false; }, 2500);
-  location.replace(target);
+  // Meta returns ?code=…&state=… (response_type=code) or #access_token=…&expires_in=…&state=… (response_type=token),
+  // sometimes with a "#_=_" / "#_" trailer. Read both places.
+  var h = location.hash.replace(/^#/, "").replace(/&?_=_$/, "").replace(/^_$/, "");
+  var q = new URLSearchParams(location.search), f = new URLSearchParams(h);
+  function g(k) { return (q.get(k) || f.get(k) || "").replace(/#_(=_)?$/, ""); }
+  var t = document.getElementById("t"), m = document.getElementById("m");
+  var code = g("code"), token = g("access_token"), exp = g("expires_in"), state = g("state"), err = g("error");
+  if (history.replaceState) history.replaceState(null, "", location.pathname);   // don't leave the code/token in history
+  if (err) { t.textContent = "Sign-in cancelled"; m.textContent = (g("error_description") || g("error_reason") || err).replace(/\+/g, " ") + ". Close this tab and click Connect again in ViceTaped Studio."; return; }
+  if (!code && !token) { t.textContent = "Nothing to do here"; m.textContent = "This page is only used during the ViceTaped app's Instagram sign-in."; return; }
+  var p = /^p(\d{2,5})-[A-Za-z0-9_-]{8,}$/.exec(state), port = p ? +p[1] : 0, ok = p && port >= 1024 && port <= 65535;
+  var qs = (code ? "code=" + encodeURIComponent(code) : "access_token=" + encodeURIComponent(token) + (exp ? "&expires_in=" + encodeURIComponent(exp) : ""))
+         + (ok ? "&state=" + encodeURIComponent(state) : "");
+  var target = "http://127.0.0.1:" + (ok ? port : 8768) + "/callback/instagram/?" + qs;
+  var copyText = target;
+  if (!ok) {   // opened from the App Dashboard's own Login URL (no ViceTaped state): hand over by copy-paste
+    t.textContent = token ? "Access token received" : "Sign-in code received";
+    m.textContent = "This sign-in wasn't started from the ViceTaped app, so it can't be passed on automatically.";
+    if (token) {
+      copyText = token;
+      document.getElementById("fbt").textContent = "Copy the token below and paste it into ViceTaped Studio › Settings › Instagram › Paste token (or `gta6clip instagram token`). Treat it like a password.";
+    } else {
+      document.getElementById("fbt").textContent = "In ViceTaped Studio › Settings › Instagram › Unified login, click Connect, then paste this link into the Paste link box (codes work once, for a short time). Easier: use Paste token instead.";
+    }
+    document.getElementById("u").textContent = token ? token.slice(0, 6) + "… (" + token.length + " characters)" : target;
+    document.getElementById("fb").hidden = false;
+  } else {
+    document.getElementById("u").textContent = target;
+    setTimeout(function () { document.getElementById("fb").hidden = false; }, 2500);
+  }
+  document.getElementById("c").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(copyText); this.textContent = "Copied"; };
+  if (ok) location.replace(target);
 })();
 </script>
 </body></html>
